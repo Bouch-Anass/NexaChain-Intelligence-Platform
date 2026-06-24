@@ -1,0 +1,101 @@
+import pandas as pd
+import numpy as np
+import os
+import json
+
+def create_notebook(script_dir):
+    nb = {
+        "cells": [
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "# Feature Engineering Notebook\n",
+                    "**Project:** NexaChain Intelligence Platform\n",
+                    "**Phase:** Week 2 (Machine Learning Prep)\n\n",
+                    "This notebook applies feature engineering techniques (Lag Variables, Rolling Averages, Mutual Information) to prepare the datasets for predictive modeling."
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "source": [
+                    "import pandas as pd\n",
+                    "import numpy as np\n",
+                    "import os\n",
+                    "from sklearn.feature_selection import mutual_info_regression\n",
+                    "\n",
+                    "cleaned_dir = r'../Data/cleaned'\n",
+                    "fe_dir = r'../Data/feature_engineered'\n",
+                    "os.makedirs(fe_dir, exist_ok=True)\n",
+                    "\n",
+                    "orders = pd.read_csv(os.path.join(cleaned_dir, 'orders_cleaned.csv'))\n",
+                    "print(f'Loaded {len(orders)} orders.')"
+                ],
+                "outputs": []
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": {},
+                "source": [
+                    "## 1. Time-Series Feature Engineering (Lag & Rolling)\n",
+                    "We need to engineer rolling features for continuous risk tracking."
+                ]
+            },
+            {
+                "cell_type": "code",
+                "execution_count": None,
+                "metadata": {},
+                "source": [
+                    "# Convert dates\n",
+                    "orders['order_date'] = pd.to_datetime(orders['order_date'])\n",
+                    "orders = orders.sort_values(by='order_date')\n",
+                    "\n",
+                    "# Rolling Average of Order Value (7-day window per product)\n",
+                    "if 'product_id' in orders.columns:\n",
+                    "    orders['rolling_7d_order_val'] = orders.groupby('product_id')['order_value_usd'].transform(lambda x: x.rolling(window=7, min_periods=1).mean())\n",
+                    "    \n",
+                    "# Lag Feature: Previous Delivery Delay\n",
+                    "if 'delivery_delay_days' in orders.columns:\n",
+                    "    orders['prev_delivery_delay'] = orders.groupby('vendor_id')['delivery_delay_days'].shift(1)\n",
+                    "    orders['prev_delivery_delay'] = orders['prev_delivery_delay'].fillna(0)\n",
+                    "\n",
+                    "orders.to_csv(os.path.join(fe_dir, 'orders_fe.csv'), index=False)\n",
+                    "print('Feature engineered orders dataset saved.')"
+                ],
+                "outputs": []
+            }
+        ],
+        "metadata": {
+            "kernelspec": {
+                "display_name": "Python 3",
+                "language": "python",
+                "name": "python3"
+            },
+            "language_info": {
+                "codemirror_mode": {
+                    "name": "ipython",
+                    "version": 3
+                },
+                "file_extension": ".py",
+                "mimetype": "text/x-python",
+                "name": "python",
+                "nbconvert_exporter": "python",
+                "pygments_lexer": "ipython3",
+                "version": "3.11.0"
+            }
+        },
+        "nbformat": 4,
+        "nbformat_minor": 4
+    }
+    
+    nb_dir = os.path.join(script_dir, r"..\Notebooks")
+    os.makedirs(nb_dir, exist_ok=True)
+    with open(os.path.join(nb_dir, 'feature_engineering.ipynb'), 'w') as f:
+        json.dump(nb, f, indent=4)
+
+if __name__ == "__main__":
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    create_notebook(script_dir)
+    print("Notebook generated successfully.")
